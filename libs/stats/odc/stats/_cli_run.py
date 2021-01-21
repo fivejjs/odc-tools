@@ -1,5 +1,7 @@
 import sys
+
 import click
+
 from ._cli_common import main, setup_logging, click_resolution, click_yaml_cfg
 
 
@@ -82,7 +84,6 @@ def run(
     from .model import TaskRunnerConfig
     from .proc import TaskRunner
     from ._plugins import import_all
-    from odc.io.text import parse_yaml_file_or_inline
 
     _log = logging.getLogger(__name__)
 
