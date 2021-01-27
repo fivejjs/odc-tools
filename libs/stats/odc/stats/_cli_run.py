@@ -107,18 +107,26 @@ def run(
         overwrite=overwrite,
         max_processing_time=max_processing_time,
     )
-    if len(resampling) > 0:
+    if resampling is not None and len(resampling) > 0:
         if plugin_config is None:
             plugin_config = {}
         plugin_config["resampling"] = resampling
 
     if plugin_config is not None:
-        _cfg['plugin_config'] = plugin_config
+        _cfg["plugin_config"] = plugin_config
 
     if cog_config is not None:
-        _cfg['cog_opts'] = cog_config
+        per_band_cfg = {k: v for k, v in cog_config.items() if isinstance(v, dict)}
+        if per_band_cfg:
+            for k in per_band_cfg:
+                cog_config.pop(k)
+
+            _cfg["cog_opts_per_band"] = per_band_cfg
+
+        _cfg["cog_opts"] = cog_config
 
     cfg = TaskRunnerConfig(**_cfg)
+    _log.info(f"Using this config: {cfg}")
 
     runner = TaskRunner(cfg, resolution=resolution)
     if dryrun:

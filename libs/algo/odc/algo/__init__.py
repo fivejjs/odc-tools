@@ -5,6 +5,7 @@
 from ._masking import (
     keep_good_np,
     keep_good_only,
+    erase_bad,
     from_float,
     from_float_np,
     to_f32,
@@ -13,7 +14,6 @@ from ._masking import (
     to_float_np,
     fmask_to_bool,
     enum_to_bool,
-    cloud_buffer,
     gap_fill,
     choose_first_valid,
     mask_cleanup,
@@ -27,6 +27,7 @@ from ._masking import (
 from ._geomedian import (
     xr_geomedian,
     reshape_for_geomedian,
+    geomedian_with_mads,
     int_geomedian,
     int_geomedian_np,
 )
@@ -61,6 +62,7 @@ from ._warp import (
 __all__ = (
     "keep_good_np",
     "keep_good_only",
+    "erase_bad",
     "from_float",
     "from_float_np",
     "to_f32",
@@ -69,7 +71,6 @@ __all__ = (
     "to_float_np",
     "fmask_to_bool",
     "enum_to_bool",
-    "cloud_buffer",
     "mask_cleanup",
     "mask_cleanup_np",
     "binary_opening",
@@ -82,6 +83,7 @@ __all__ = (
     "int_geomedian",
     "int_geomedian_np",
     "reshape_for_geomedian",
+    "geomedian_with_mads",
     "reshape_yxbt",
     "chunked_persist",
     "chunked_persist_da",

@@ -82,6 +82,64 @@ def keep_good_only(x, where, inplace=False, nodata=None):
     return xr.DataArray(data, dims=x.dims, coords=x.coords, attrs=x.attrs, name=x.name)
 
 
+def erase_bad_np(xx, where, nodata, out=None):
+    if out is None:
+        out = np.copy(xx)
+    else:
+        assert out.shape == xx.shape
+        assert out.dtype == xx.dtype
+        assert out is not xx
+        out[:] = xx
+    np.copyto(out, nodata, where=where)
+    return out
+
+
+def erase_bad(x, where, inplace=False, nodata=None):
+    """
+    Return a copy of x, but with some pixels replaced with `nodata`.
+
+    This function can work on dask arrays, in which case output will be a dask array as well.
+
+    If x is a Dataset then operation will be applied to all data variables.
+
+    :param x: xarray.DataArray with `nodata` property
+    :param where: xarray.DataArray<bool> True -- replace with `x.nodata` False -- keep as it were
+    :param inplace: Modify pixels in x directly, not valid for dask arrays.
+
+    For every pixel of x[idx], output is:
+
+     - nodata  if where[idx] == True
+     - x[idx]  if where[idx] == False
+    """
+    if isinstance(x, xr.Dataset):
+        return x.apply(lambda x: erase_bad(x, where, inplace=inplace), keep_attrs=True)
+
+    assert x.shape == where.shape
+    if nodata is None:
+        nodata = getattr(x, "nodata", 0)
+
+    if inplace:
+        if dask.is_dask_collection(x):
+            raise ValueError("Can not perform inplace operation on a dask array")
+
+        np.copyto(x.data, nodata, where=where.data)
+        return x
+
+    if dask.is_dask_collection(x):
+        data = da.map_blocks(
+            erase_bad_np,
+            x.data,
+            where.data,
+            nodata,
+            name=randomize("erase_bad"),
+            dtype=x.dtype,
+        )
+    else:
+        data = erase_bad_np(x.data, where.data, nodata)
+
+    return xr.DataArray(data, dims=x.dims, coords=x.coords, attrs=x.attrs, name=x.name)
+
+
 def from_float_np(x, dtype, nodata, scale=1, offset=0, where=None, out=None):
     scale = np.float32(scale)
     offset = np.float32(offset)
@@ -382,53 +440,6 @@ def mask_cleanup(
         data = mask_cleanup_np(data, r)
 
     return xr.DataArray(data, attrs=mask.attrs, coords=mask.coords, dims=mask.dims)
-
-
-def cloud_buffer(
-    mask: xr.DataArray, radius: int, dilation_radius: int = None
-) -> xr.DataArray:
-
-    """This method accepts cloud masks and applies morphological functions to improve cloud masking
-    The buffer is formed by applying dilation(dilation_radius) followed by erosion(radius + dilation_radius) if
-    dilation_radius is specified otherwise just erosion(radius)
-    The sequential application of these functions will improve false cloud detection for sandy beaches
-
-    :param mask: A mask which has cloud classes (cloud shadows, cloud medium probability,
-                cloud high probability, thin cirrus) set to False
-    :param radius: kernel radius
-    :param dilation_radius: kernel Radius
-
-    example:
-    clouds_not = enum_to_bool(xx.scl, cloud_classes, invert=True)
-    cloud_buffer(clouds_not, radius, dilation_radius)
-    """
-    from skimage.morphology import disk
-    from dask_image.ndmorph import binary_erosion, binary_dilation
-
-    dilation_kernel = disk(dilation_radius) if dilation_radius is not None else None
-    if mask.ndim == 3 and dilation_radius is not None:
-        dilation_kernel = disk(dilation_radius)[np.newaxis, :, :]
-
-    erosion_radius = radius if dilation_radius is None else (dilation_radius + radius)
-    if mask.ndim == 3:
-        erosion_kernel = disk(erosion_radius)[np.newaxis, :, :]
-    else:
-        erosion_kernel = disk(erosion_radius)
-
-    if dilation_radius is None:
-        return xr.DataArray(
-            data=binary_erosion(mask.data, erosion_kernel, border_value=True),
-            coords=mask.coords,
-        )
-    else:
-        return xr.DataArray(
-            data=binary_erosion(
-                binary_dilation(mask.data, dilation_kernel, border_value=True),
-                erosion_kernel,
-                border_value=True,
-            ),
-            coords=mask.coords,
-        )
 
 
 def enum_to_bool(

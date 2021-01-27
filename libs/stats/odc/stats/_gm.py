@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 import xarray as xr
 from odc.stats.model import Task
 from odc.algo.io import load_with_native_transform
-from odc.algo import keep_good_only, yxbt_sink
+from odc.algo import erase_bad, geomedian_with_mads, to_rgba
 from odc.algo.io import load_enum_filtered
 from .model import OutputProduct, StatsPluginInterface
 from . import _plugins
@@ -14,10 +14,21 @@ from . import _plugins
 class StatsGMS2(StatsPluginInterface):
     def __init__(
         self,
-        resampling: str = "average",
+        resampling: str = "bilinear",
         bands: Optional[Tuple[str, ...]] = None,
         filters: Optional[Tuple[int, int]] = (2, 5),
         work_chunks: Tuple[int, int] = (400, 400),
+        mask_band: str = "SCL",
+        cloud_classes=(
+            "cloud shadows",
+            "cloud medium probability",
+            "cloud high probability",
+            "thin cirrus",
+        ),
+        basis_band=None,
+        aux_names=dict(smad="SMAD", emad="EMAD", bcmad="BCMAD", count="COUNT"),
+        rgb_bands=None,
+        rgb_clamp=(1, 3_000),
     ):
         if bands is None:
             bands = (
@@ -32,21 +43,22 @@ class StatsGMS2(StatsPluginInterface):
                 "B11",
                 "B12",
             )
+            if rgb_bands is None:
+                rgb_bands = ("B04", "B03", "B02")
 
         self.resampling = resampling
         self.bands = tuple(bands)
-        self._basis_band = self.bands[0]
-        self.mad_bands = ("smad", "emad", "bcmad")
-        self._mask_band = "SCL"
-        self.filters = filters
-        self.cloud_classes = (
-            "cloud shadows",
-            "cloud medium probability",
-            "cloud high probability",
-            "thin cirrus",
+        self._basis_band = basis_band or self.bands[0]
+        self._renames = aux_names
+        self.rgb_bands = rgb_bands
+        self.rgb_clamp = rgb_clamp
+        self.aux_bands = tuple(
+            self._renames.get(k, k) for k in ("smad", "emad", "bcmad", "count")
         )
-
-        self._work_chunks = (*work_chunks, -1, -1)
+        self._mask_band = mask_band
+        self.filters = filters
+        self.cloud_classes = tuple(cloud_classes)
+        self._work_chunks = work_chunks
 
     def product(self, location: Optional[str] = None, **kw) -> OutputProduct:
         name = "ga_s2_gm"
@@ -59,7 +71,7 @@ class StatsGMS2(StatsPluginInterface):
         else:
             location = location.rstrip("/")
 
-        measurements = self.bands + self.mad_bands
+        measurements = self.bands + self.aux_bands
 
         properties = {
             "odc:file_format": "GeoTIFF",
@@ -105,20 +117,32 @@ class StatsGMS2(StatsPluginInterface):
             chunks=chunks,
         )
 
-        xx = keep_good_only(xx, ~erased)
+        xx = erase_bad(xx, erased)
         return xx
 
     def reduce(self, xx: xr.Dataset) -> xr.Dataset:
-        from odc.algo._geomedian import geomedian_with_mads
-
-        yxbt = yxbt_sink(xx, self._work_chunks)
-
         scale = 1 / 10_000
-        cfg = dict(maxiters=1000, num_threads=1, scale=scale, offset=-1 * scale,)
+        cfg = dict(
+            maxiters=1000,
+            num_threads=1,
+            scale=scale,
+            offset=-1 * scale,
+            reshape_strategy="mem",
+            out_chunks=(-1, -1, -1),
+            work_chunks=self._work_chunks,
+            compute_count=True,
+            compute_mads=True,
+        )
 
-        gm = geomedian_with_mads(yxbt, **cfg)
+        gm = geomedian_with_mads(xx, **cfg)
+        gm = gm.rename(self._renames)
 
         return gm
+
+    def rgba(self, xx: xr.Dataset) -> Optional[xr.DataArray]:
+        if self.rgb_bands is None:
+            return None
+        return to_rgba(xx, clamp=self.rgb_clamp, bands=self.rgb_bands)
 
 
 _plugins.register("gm-s2", StatsGMS2)

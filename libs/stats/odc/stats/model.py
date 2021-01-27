@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import math
-import psutil
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -235,6 +234,17 @@ class Task:
         """
         return self._prefix(relative_to) + "." + ext
 
+    def aux_path(self, name: str, relative_to: str = "dataset", ext: str = EXT_TIFF):
+        """
+        Compute path for some auxilary file.
+
+        :param relative_to: dataset|product|absolute
+        :param name: "band"
+        :param ext: File extension, defaults to tif
+        """
+        prefix = self._prefix(relative_to)
+        return f"{prefix}_{name}.{ext}"
+
     def render_metadata(
         self, ext: str = EXT_TIFF, processing_dt: Optional[datetime] = None
     ) -> Dict[str, Any]:
@@ -322,6 +332,12 @@ class StatsPluginInterface(ABC):
     def reduce(self, xx: xr.Dataset) -> xr.Dataset:
         pass
 
+    def rgba(self, xx: xr.Dataset) -> Optional[xr.DataArray]:
+        """
+        Given result of ``.reduce(..)`` optionally produce RGBA preview image
+        """
+        return None
+
 
 @dataclass
 class TaskResult:
@@ -371,6 +387,3 @@ class TaskRunnerConfig:
 
     def __post_init__(self):
         self.cog_opts = dicttoolz.merge(self.default_cog_settings(), self.cog_opts)
-
-        if self.threads <= 0:
-            self.threads = psutil.cpu_count()
