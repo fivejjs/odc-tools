@@ -28,7 +28,7 @@ TileIdx = Union[Tuple[int, int], Tuple[str, int, int]]
 
 
 def ds2doc(ds) -> Tuple[UUID, Document]:
-    return (ds.id, dict(uris=ds.uris, product=ds.type.name, metadata=ds.metadata_doc))
+    return ds.id, dict(uris=ds.uris, product=ds.type.name, metadata=ds.metadata_doc)
 
 
 def doc2ds(
