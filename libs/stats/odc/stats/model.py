@@ -379,7 +379,9 @@ class TaskRunnerConfig:
     output_location: str = ""
     s3_public: bool = False
     cog_opts: Dict[str, Any] = field(init=True, repr=True, default_factory=dict)
-    cog_opts_per_band: Dict[str, Dict[str, Any]] = field(init=True, repr=True, default_factory=dict)
+    cog_opts_per_band: Dict[str, Dict[str, Any]] = field(
+        init=True, repr=True, default_factory=dict
+    )
     overwrite: bool = False
 
     # SQS config when applicable
@@ -387,3 +389,6 @@ class TaskRunnerConfig:
 
     def __post_init__(self):
         self.cog_opts = dicttoolz.merge(self.default_cog_settings(), self.cog_opts)
+
+
+# TODO: add TaskRunnerconfig with customized task list

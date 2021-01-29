@@ -71,7 +71,7 @@ def parse_task(s: str) -> TileIdx_txy:
     t, x, y = split_and_check(s, sep, 3)
     if t.startswith("x"):
         t, x, y = y, t, x
-    return (t, int(x.lstrip("x")), int(y.lstrip("y")))
+    return t, int(x.lstrip("x")), int(y.lstrip("y"))
 
 
 class SaveTasks:
@@ -134,7 +134,8 @@ class SaveTasks:
             temporal_range = DateTimeRange(temporal_range)
 
         cfg: Dict[str, Any] = dict(
-            grid=self._grid, freq=self._frequency,
+            grid=self._grid,
+            freq=self._frequency,
         )
 
         query = dict(product=product)
