@@ -62,7 +62,7 @@ class CropMaskFeautures(StatsPluginInterface):
 
         # Dictionary mapping full data names to simpler alias names
         self.bandnames_dict = {
-            "nir_1": "nir",
+            # "nir_1": "nir",
             "B02": "blue",
             "B03": "green",
             "B04": "red",
@@ -209,7 +209,7 @@ class CropMaskFeautures(StatsPluginInterface):
         )
 
         gm = geomedian_with_mads(xx, **cfg)
-        self._renames.update(self.bandnames_dict)
+        # self._renames.update(self.bandnames_dict)
         gm = gm.rename(self._renames)
         gm = self.add_indices(gm)
         return gm
