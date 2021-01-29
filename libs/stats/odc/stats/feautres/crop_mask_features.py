@@ -4,12 +4,11 @@ crop mask feautres for AI
 from typing import Optional, Tuple
 
 import xarray as xr
+
 from odc.algo import erase_bad, geomedian_with_mads, to_rgba
 from odc.algo.io import load_enum_filtered
 from odc.algo.io import load_with_native_transform
 from odc.stats.model import Task
-from xarray import DataArray
-
 from .model import OutputProduct, StatsPluginInterface
 from .. import _plugins
 
@@ -192,7 +191,7 @@ class CropMaskFeautures(StatsPluginInterface):
         }
         for key, func in index_dict.items():
             index_array = func(ds)
-        return ds
+        return index_array
 
     def reduce(self, xx: xr.Dataset) -> xr.Dataset:
         scale = 1 / 10_000
