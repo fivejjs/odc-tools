@@ -376,3 +376,6 @@ class TaskReader:
             # TODO: switch to JSON for SQS message body
             tidx = parse_task(msg.body)
             yield self.load_task(tidx, product, source=msg)
+
+
+# TODO: add modify task Task reader for customiszed task

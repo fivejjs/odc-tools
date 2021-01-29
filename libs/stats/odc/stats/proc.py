@@ -30,7 +30,7 @@ class TaskRunner:
         self, cfg: TaskRunnerConfig, resolution: Optional[Tuple[float, float]] = None
     ):
         """
-
+        From runner configuration get the sub class of statsPluginInterface.
         """
         _log = logging.getLogger(__name__)
         self._cfg = cfg
@@ -42,6 +42,7 @@ class TaskRunner:
         )
 
         _log.info(f"Resolving plugin: {cfg.plugin}")
+        # resolve below is to initialize plugin class
         mk_proc = _plugins.resolve(cfg.plugin)
         self.proc = mk_proc(**cfg.plugin_config)
         self.product = self.proc.product(cfg.output_location)
