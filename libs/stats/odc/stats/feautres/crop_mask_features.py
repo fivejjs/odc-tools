@@ -20,8 +20,9 @@ class CropMaskFeautures(StatsPluginInterface):
     """
 
     sr_max = 10000
+    # TODO: add slope feature later when need it.
     url_slope = "https://deafrica-data.s3.amazonaws.com/ancillary/dem-derivatives/cog_slope_africa.tif"
-    # todo add chiprs_uri
+    # TODO:  add chiprs rainfall later when needed
     chirps_uri = "s3-to-tbd"
 
     def __init__(
@@ -100,7 +101,9 @@ class CropMaskFeautures(StatsPluginInterface):
         """
         rename the variables according to the band_dict
         """
-        return {a: b for a, b in self.bandnames_dict.items() if a in ds.variables}
+        return ds.rename(
+            {a: b for a, b in self.bandnames_dict.items() if a in ds.variables}
+        )
 
     def product(self, location: Optional[str] = None, **kw) -> OutputProduct:
         name = "crop_mask_features"
@@ -140,6 +143,9 @@ class CropMaskFeautures(StatsPluginInterface):
         )
 
     def input_data(self, task: Task) -> xr.Dataset:
+        """
+        TODO: add those additional index here
+        """
         basis = self._basis_band
         chunks = {"y": -1, "x": -1}
         groupby = "solar_day"
@@ -190,10 +196,13 @@ class CropMaskFeautures(StatsPluginInterface):
             "MNDWI": lambda ds: (ds.green - ds.swir_1) / (ds.green + ds.swir_1),
         }
         for key, func in index_dict.items():
-            index_array = func(ds)
-        return index_array
+            ds[key] = func(ds)
+        return ds
 
     def reduce(self, xx: xr.Dataset) -> xr.Dataset:
+        """
+        reduce will process input_data above
+        """
         scale = 1 / 10_000
         cfg = dict(
             maxiters=1000,
@@ -209,6 +218,9 @@ class CropMaskFeautures(StatsPluginInterface):
 
         gm = geomedian_with_mads(xx, **cfg)
         # self._renames.update(self.bandnames_dict)
+        # print("variables are: {}".format(list(gm.variables)))
+        # ['red', 'blue', 'green', 'nir', 'red_edge_1', 'red_edge_2', 'red_edge_3', 'swir_1', 'swir_2', 'y', 'x',
+        #  'smad', 'emad', 'bcmad', 'count']
         gm = gm.rename(self._renames)
         gm = self.add_indices(gm)
         return gm
