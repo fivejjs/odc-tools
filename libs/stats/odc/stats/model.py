@@ -1,19 +1,20 @@
-from abc import ABC, abstractmethod
 import math
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple, Union
 from uuid import UUID
-from toolz import dicttoolz
+
+import pandas as pd
 import pystac
 import xarray as xr
-import pandas as pd
 from datacube.model import Dataset
 from datacube.utils.dates import normalise_dt
 from datacube.utils.geometry import GeoBox
 from odc.index import odc_uuid
 from odc.io.text import split_and_check
+from toolz import dicttoolz
 
 TileIdx_xy = Tuple[int, int]
 TileIdx_txy = Tuple[str, int, int]
@@ -33,7 +34,6 @@ def format_datetime(dt: datetime, with_tz=True, timespec="microseconds") -> str:
 
 @dataclass
 class DateTimeRange:
-
     __slots__ = ("start", "end", "freq")
 
     def __init__(self, start: Union[str, datetime], freq: Optional[str] = None):
@@ -222,6 +222,7 @@ class Task:
         Compute dictionary mapping band name to paths.
 
         :param relative_to: dataset|product|absolute
+        :param ext: file extension, tiff
         """
         prefix = self._prefix(relative_to)
         return {band: f"{prefix}_{band}.{ext}" for band in self.product.measurements}
@@ -240,7 +241,7 @@ class Task:
 
         :param relative_to: dataset|product|absolute
         :param name: "band"
-        :param ext: File extension, defaults to tif
+        :param ext: File extension, defaults is "tif"
         """
         prefix = self._prefix(relative_to)
         return f"{prefix}_{name}.{ext}"
@@ -389,6 +390,3 @@ class TaskRunnerConfig:
 
     def __post_init__(self):
         self.cog_opts = dicttoolz.merge(self.default_cog_settings(), self.cog_opts)
-
-
-# TODO: add TaskRunnerconfig with customized task list

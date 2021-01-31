@@ -88,9 +88,9 @@ class CropMaskFeautures(StatsPluginInterface):
         # collect from calculate_indices
         self.calculated_bands = ("NDVI", "LAI", "MNDWI")
         # slop band
-        self.slope_band = ("slope",)
+        # self.slope_band = ("slope",)
         # chirps rainfall band
-        self.rainfall_band = ("rainfall",)
+        # self.rainfall_band = ("rainfall",)
 
         self._mask_band = mask_band
         self.filters = filters
@@ -121,14 +121,14 @@ class CropMaskFeautures(StatsPluginInterface):
             self.bands
             + self.aux_bands
             + self.calculated_bands
-            + self.slope_band
-            + self.rainfall_band
+            # + self.slope_band
+            # + self.rainfall_band
         )
 
         properties = {
             "odc:file_format": "GeoTIFF",
             "odc:producer": "ga.gov.au",
-            "odc:product_family": "statistics",  # TODO: ???
+            "odc:product_family": "statistics",
             "platform": "sentinel-2",
         }
 
