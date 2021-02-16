@@ -27,11 +27,7 @@ def import_all():
     import importlib
 
     # TODO: make that more automatic
-    modules = [
-        "odc.stats._pq",
-        "odc.stats._gm",
-        "odc.stats.features.crop_mask_features",
-    ]
+    modules = ["odc.stats._pq", "odc.stats._gm", "odc.stats._wofs"]
 
     for mod in modules:
         try:
