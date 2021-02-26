@@ -4,7 +4,7 @@ and index datasets found into RDS
 """
 import logging
 import sys
-from typing import Tuple
+from typing import Tuple, Dict, Any
 
 import click
 from datacube import Datacube
@@ -43,7 +43,7 @@ def dump_to_odc(
             # TODO: Capture UUID's from dataset doc and perform a bulk has
             try:
                 if update:
-                    updates = {}
+                    updates: Dict[Tuple, Any] = {}
                     if allow_unsafe:
                         updates = {tuple(): changes.allow_any}
                     dc.index.datasets.update(ds, updates_allowed=updates)
@@ -114,6 +114,7 @@ def dump_to_odc(
 )
 @click.argument("uri", type=str, nargs=1)
 @click.argument("product", type=str, nargs=1)
+@click.argument("endpoint_url", type=str, nargs=1)
 def cli(
     skip_lineage,
     fail_on_missing_lineage,
@@ -126,6 +127,7 @@ def cli(
     request_payer,
     uri,
     product,
+    endpoint_url,
 ):
     """ Iterate through files in an S3 bucket and add them to datacube"""
 
@@ -140,7 +142,11 @@ def cli(
         opts["RequestPayer"] = "requester"
 
     # Get a generator from supplied S3 Uri for metadata definitions
-    fetcher = S3Fetcher(aws_unsigned=no_sign_request)
+    # TODO: add endpoint_url into the S3Fetcher
+    # Fixme in S3Fetcher class:
+    #  s3_ctx = session.create_client("s3", region_name=region_name, config=s3_cfg, endpoint_url=endpoint_url)
+
+    fetcher = S3Fetcher(aws_unsigned=no_sign_request, endpoint_url=endpoint_url)
 
     # TODO: Share Fetcher
     s3_obj_stream = s3_find_glob(uri, skip_check=skip_check, s3=fetcher, **opts)
@@ -175,7 +181,6 @@ def cli(
         update=update,
         allow_unsafe=allow_unsafe,
     )
-
     print(f"Added {added} Datasets, Failed {failed} Datasets")
 
     if failed > 0:
