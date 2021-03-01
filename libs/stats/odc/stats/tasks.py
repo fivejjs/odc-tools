@@ -71,7 +71,7 @@ def parse_task(s: str) -> TileIdx_txy:
     t, x, y = split_and_check(s, sep, 3)
     if t.startswith("x"):
         t, x, y = y, t, x
-    return t, int(x.lstrip("x")), int(y.lstrip("y"))
+    return (t, int(x.lstrip("x")), int(y.lstrip("y")))
 
 
 class SaveTasks:
@@ -366,6 +366,7 @@ class TaskReader:
         **kw,
     ) -> Iterator[Task]:
         from odc.aws.queue import get_messages, get_queue
+        from ._sqs import SQSWorkToken
 
         product = self._resolve_product(product)
 
@@ -374,8 +375,6 @@ class TaskReader:
 
         for msg in get_messages(sqs_queue, visibility_timeout=visibility_timeout, **kw):
             # TODO: switch to JSON for SQS message body
+            token = SQSWorkToken(msg, visibility_timeout)
             tidx = parse_task(msg.body)
-            yield self.load_task(tidx, product, source=msg)
-
-
-# TODO: add modify task Task reader for customiszed task
+            yield self.load_task(tidx, product, source=token)

@@ -170,6 +170,69 @@ class OutputProduct:
         )
 
 
+class WorkTokenInterface(ABC):
+    @staticmethod
+    def now():
+        """
+        Implementations should use this method internally
+        """
+        return datetime.utcnow()
+
+    @abstractproperty
+    def start_time(self) -> datetime:
+        """
+        Should return timestamp when task "started"
+        """
+        pass
+
+    @abstractproperty
+    def deadline(self) -> datetime:
+        """
+        Should return timestamp by which work is to be completed
+        """
+        pass
+
+    @abstractmethod
+    def done(self):
+        """
+        Called when work is completed successfully
+        """
+        pass
+
+    @abstractmethod
+    def cancel(self):
+        """
+        Called when work is terminated for whatever reason without successful result
+        """
+        pass
+
+    @abstractmethod
+    def extend(self, seconds: int) -> bool:
+        """
+        Called to extend work deadline
+        """
+        pass
+
+    @property
+    def active_seconds(self) -> float:
+        """
+        :returns: Number of seconds this Token has been active for
+        """
+        return (self.now() - self.start_time).total_seconds()
+
+    def extend_if_needed(self, seconds, buffer_seconds: int = 30) -> bool:
+        """
+        Call ``.extend(seconds)`` only if deadline is within ``buffer_seconds`` from now
+
+        :returns: True if deadline is still too far in the future
+        :returns: Result of ``.extend(seconds)`` if deadline is close enough
+        """
+        t_now = self.now()
+        if t_now + timedelta(seconds=buffer_seconds) > self.deadline:
+            return self.extend(seconds)
+        return True
+
+
 @dataclass
 class Task:
     product: OutputProduct
@@ -179,7 +242,7 @@ class Task:
     datasets: Tuple[Dataset, ...] = field(repr=False)
     uuid: UUID = UUID(int=0)
     short_time: str = field(init=False, repr=False)
-    source: Any = field(init=True, repr=False, default=None)
+    source: Optional[WorkTokenInterface] = field(init=True, repr=False, default=None)
 
     def __post_init__(self):
         self.short_time = self.time_range.short
@@ -442,8 +505,20 @@ class TaskRunnerConfig:
     cog_opts: Dict[str, Any] = field(init=True, repr=True, default_factory=dict)
     overwrite: bool = False
 
-    # SQS config when applicable
-    max_processing_time: int = 60 * 60
+    # Terminate task if running longer than this amount (seconds)
+    max_processing_time: int = 0
+
+    # tuning/testing params
+    #
+
+    # SQS renew amount (seconds)
+    job_queue_max_lease: int = 5 * 60
+
+    # Renew work token when this close to deadline (seconds)
+    renew_safety_margin: int = 30
+
+    # How often future is checked for timeout/sqs renew
+    future_poll_interval: float = 5
 
     def __post_init__(self):
         self.cog_opts = dicttoolz.merge(self.default_cog_settings(), self.cog_opts)

@@ -34,6 +34,7 @@ def dump_to_odc(
     # Consume chained streams to DB
     for result in ds_stream:
         ds, err = result
+
         if err is not None:
             logging.error(err)
             ds_failed += 1
@@ -147,7 +148,6 @@ def cli(
     #  s3_ctx = session.create_client("s3", region_name=region_name, config=s3_cfg, endpoint_url=endpoint_url)
 
     fetcher = S3Fetcher(aws_unsigned=no_sign_request, endpoint_url=endpoint_url)
-
     # TODO: Share Fetcher
     s3_obj_stream = s3_find_glob(uri, skip_check=skip_check, s3=fetcher, **opts)
 
